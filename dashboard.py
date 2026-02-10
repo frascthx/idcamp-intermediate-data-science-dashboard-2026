@@ -5,22 +5,41 @@ import seaborn as sns
 
 
 @st.cache_data
-def load_dataset(year: int | None = None):
+def load_dataset(year: int | None = None, cities: list | None = None, price_min: float | None = None, price_max: float | None = None):
     df = pd.read_csv('main_data.csv', parse_dates=['order_purchase_timestamp'])
+
+    df['price'] = pd.to_numeric(df['price'])
 
     if year is not None:
         df = df[df['order_purchase_timestamp'].dt.year == year]
+
+    if cities is not None and len(cities) > 0:
+        df = df[df['customer_city'].isin(cities)]
+
+    if price_min is not None:
+        df = df[df['price'] >= price_min]
+
+    if price_max is not None:
+        df = df[df['price'] <= price_max]
 
     return df
 
 
 @st.cache_data
 def get_unique_years():
-    return [2018, 2017, 2016]
-    # return sorted(main_df['order_purchase_timestamp'].dt.year.unique().tolist(), reverse=True)
+    return sorted(load_dataset()['order_purchase_timestamp'].dt.year.unique().tolist(), reverse=True)
 
 
 @st.cache_data
+def get_unique_cities():
+    return load_dataset()['customer_city'].unique().tolist()
+
+
+@st.cache_data
+def get_max_price():
+    return float(load_dataset()['price'].max())
+
+
 def get_state_sales_revenue_df(year: int | None = None):
     result = (
         main_df[main_df['order_purchase_timestamp'].dt.year == year]
@@ -100,7 +119,6 @@ def render_high_sales_low_revenue_state(year: int | None = None):
     st.pyplot(fig=fig)
 
 
-@st.cache_data
 def get_high_sales_low_revenue_product_df(year: int | None = None, top_n: int = 3):
     product_high_sales_low_revenue = (
         main_df[
@@ -237,7 +255,6 @@ def render_sales_by_photo_count(year: int | None = None):
             'sales_volume'].mean().reset_index()
     )
 
-    # plt.figure(figsize=(10, 6))
     sns.barplot(data=avg_sales_by_photo,
                 x='photo_count', y='sales_volume', ax=ax)
     ax.set_title(f'Average Sales Volume by Product Photo Count {year}')
@@ -285,7 +302,8 @@ def render_review_score_by_desc_length(year: int | None = None):
     ax.set_title(f'Review Score by Product Description Length {year}')
 
     st.pyplot(fig)
-    
+
+
 def render_review_score_by_photo_count(year: int | None = None):
     fig, ax = plt.subplots()
 
@@ -295,15 +313,28 @@ def render_review_score_by_photo_count(year: int | None = None):
     ax.set_title(f'Review Score by Product Photo Count {year}')
 
     st.pyplot(fig)
-    
+
 
 with st.sidebar:
+    st.header(body='Filter')
+
     year_filter = st.selectbox(
         label='Year',
         options=get_unique_years()
     )
-    
-main_df = load_dataset(year_filter)
+
+    cities_filter = st.multiselect(
+        label='Cities',
+        options=get_unique_cities(),
+        default=None
+    )
+
+    price_min_filter, price_max_filter = st.slider(
+        "Price Range", min_value=0.0, max_value=get_max_price(), value=(0.0, get_max_price()), format='dollar')
+
+main_df = load_dataset(year=year_filter, cities=cities_filter, price_min=price_min_filter, price_max=price_max_filter)
+
+show_question_1 = cities_filter is None or len(cities_filter) == 0
 
 question_1_tab, question_2_tab = st.tabs(['Question 1', 'Question 2'])
 
@@ -311,17 +342,21 @@ with question_1_tab:
     st.header(
         body=f"Which states show high sales volume but contribute less to total revenue in {year_filter}, and what product categories dominate those states?")
 
-    st.divider()
+    if not show_question_1:
+        st.subheader(body="Cant use cities filter in this question")
+    else:
+        st.divider()
 
-    st.subheader(body=f"State with High Sales but Low Revenue {year_filter}")
+        st.subheader(
+            body=f"State with High Sales but Low Revenue {year_filter}")
 
-    render_high_sales_low_revenue_state(year=year_filter)
+        render_high_sales_low_revenue_state(year=year_filter)
 
-    st.divider()
+        st.divider()
 
-    st.subheader(body=f"Dominating Product Categories {year_filter}")
+        st.subheader(body=f"Dominating Product Categories {year_filter}")
 
-    render_high_sales_low_revenue_product_category(year=year_filter)
+        render_high_sales_low_revenue_product_category(year=year_filter)
 
 with question_2_tab:
     st.header(
@@ -363,7 +398,7 @@ with question_2_tab:
         render_review_score_by_desc_length(year=year_filter)
 
         st.divider()
-        
+
         st.subheader(
             body=f'Review Score by Product Photo Count {year_filter}')
 
