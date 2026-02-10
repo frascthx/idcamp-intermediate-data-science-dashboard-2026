@@ -16,7 +16,8 @@ def load_dataset(year: int | None = None):
 
 @st.cache_data
 def get_unique_years():
-    return sorted(main_df['order_purchase_timestamp'].dt.year.unique().tolist(), reverse=True)
+    return [2018, 2017, 2016]
+    # return sorted(main_df['order_purchase_timestamp'].dt.year.unique().tolist(), reverse=True)
 
 
 @st.cache_data
@@ -294,14 +295,14 @@ def render_review_score_by_photo_count(year: int | None = None):
     ax.set_title(f'Review Score by Product Photo Count {year}')
 
     st.pyplot(fig)
-
+    
 
 with st.sidebar:
     year_filter = st.selectbox(
         label='Year',
         options=get_unique_years()
     )
-
+    
 main_df = load_dataset(year_filter)
 
 question_1_tab, question_2_tab = st.tabs(['Question 1', 'Question 2'])
