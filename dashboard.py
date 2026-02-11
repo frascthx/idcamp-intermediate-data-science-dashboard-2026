@@ -40,7 +40,7 @@ def get_max_price():
     return float(load_dataset()['price'].max())
 
 
-def get_state_sales_revenue_df(year: int | None = None):
+def get_city_sales_revenue_df(year: int | None = None):
     result = (
         main_df[main_df['order_purchase_timestamp'].dt.year == year]
         .groupby('customer_city')
@@ -68,15 +68,15 @@ def get_state_sales_revenue_df(year: int | None = None):
     return result
 
 
-def render_high_sales_low_revenue_state(year: int | None = None):
-    state_sales_revenue_result_df = get_state_sales_revenue_df(year=year)
+def render_high_sales_low_revenue_city(year: int | None = None):
+    city_sales_revenue_result_df = get_city_sales_revenue_df(year=year)
 
     # set image size
     fig, ax = plt.subplots(figsize=(20, 12))
 
     # use sns scatterplot with size / buble chart
     sns.scatterplot(
-        data=state_sales_revenue_result_df,
+        data=city_sales_revenue_result_df,
         x='total_sales',
         y='revenue',
         size='avg_revenue_per_sales',
@@ -87,13 +87,13 @@ def render_high_sales_low_revenue_state(year: int | None = None):
         ax=ax
     )
 
-    # focus on top 5 state with high sales low revenue
-    volume_threshold = state_sales_revenue_result_df['total_sales'].quantile(
+    # focus on top 5 city with high sales low revenue
+    volume_threshold = city_sales_revenue_result_df['total_sales'].quantile(
         0.75)
 
     focus_cities = (
-        state_sales_revenue_result_df
-        [state_sales_revenue_result_df['total_sales'] >= volume_threshold]
+        city_sales_revenue_result_df
+        [city_sales_revenue_result_df['total_sales'] >= volume_threshold]
         .sort_values('avg_revenue_per_sales', ascending=True)
         .head(5)
     )
@@ -130,9 +130,9 @@ def get_high_sales_low_revenue_product_df(year: int | None = None, top_n: int = 
         .reset_index()
     )
 
-    state_sales_revenue_df = get_state_sales_revenue_df(year=year)
+    city_sales_revenue_df = get_city_sales_revenue_df(year=year)
 
-    top_5_cities = state_sales_revenue_df['customer_city'][:5].to_list()
+    top_5_cities = city_sales_revenue_df['customer_city'][:5].to_list()
 
     product_high_sales_low_revenue = product_high_sales_low_revenue[product_high_sales_low_revenue['customer_city'].isin(
         top_5_cities)]
@@ -340,7 +340,7 @@ question_1_tab, question_2_tab = st.tabs(['Question 1', 'Question 2'])
 
 with question_1_tab:
     st.header(
-        body=f"Which states show high sales volume but contribute less to total revenue in {year_filter}, and what product categories dominate those states?")
+        body=f"Which city show high sales volume but contribute less to total revenue in {year_filter}, and what product categories dominate those cities?")
 
     if not show_question_1:
         st.subheader(body="Cant use cities filter in this question")
@@ -348,9 +348,9 @@ with question_1_tab:
         st.divider()
 
         st.subheader(
-            body=f"State with High Sales but Low Revenue {year_filter}")
+            body=f"City with High Sales but Low Revenue {year_filter}")
 
-        render_high_sales_low_revenue_state(year=year_filter)
+        render_high_sales_low_revenue_city(year=year_filter)
 
         st.divider()
 
